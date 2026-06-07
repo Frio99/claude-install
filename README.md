@@ -34,6 +34,26 @@ irm https://raw.githubusercontent.com/Frio99/claude-install/main/install.ps1 | i
 
 ---
 
+## 不想要了？一键卸载
+
+### 🍎 Mac / Linux
+```bash
+curl -fsSL https://raw.githubusercontent.com/Frio99/claude-install/main/uninstall.sh | bash
+```
+
+### 🪟 Windows (PowerShell)
+```powershell
+irm https://raw.githubusercontent.com/Frio99/claude-install/main/uninstall.ps1 | iex
+```
+
+卸载时会问你一句：
+- **直接回车** → 只删除 Claude Code 程序，保留你的配置和登录。
+- **输入 `y` 再回车** → 连配置和登录信息一起清空（**完全重置**，适合重新录教程 / 从头演示安装）。
+
+> 卸载**不会**删除 Node.js、Git 等通用工具（别的程序可能在用）。
+
+---
+
 ## 装完之后怎么开始用？
 
 1. 在终端 / PowerShell 里输入 `claude`，按回车
