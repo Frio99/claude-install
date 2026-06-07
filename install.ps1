@@ -69,6 +69,27 @@ if ($needNode) {
     }
 }
 
+# ---------- [2.5/4] 检测 Git for Windows (Claude Code 运行依赖) ----------
+# Claude Code 在 Windows 上需要 bash 环境,Git for Windows 自带 bash,装上即可。
+Write-Host ""
+Write-Host "[2.5/4] 检测 Git for Windows (Claude Code 运行需要)..."
+if (Get-Command git -ErrorAction SilentlyContinue) {
+    Write-Host "  [OK] 已安装 Git ($((git --version)))" -ForegroundColor Green
+} else {
+    Write-Host "  未检测到 Git for Windows"
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        Write-Host "  用 winget 安装 Git for Windows..."
+        winget install -e --id Git.Git
+        Write-Host ""
+        Write-Host "  [!] Git 刚装好,当前窗口还认不到它。" -ForegroundColor Yellow
+        Write-Host "      请关掉本 PowerShell 窗口,重新打开后再运行一次本命令。" -ForegroundColor Yellow
+        exit 0
+    } else {
+        Write-Host "  [X] 未找到 winget,请手动安装 Git for Windows: https://git-scm.com/downloads/win" -ForegroundColor Red
+        exit 1
+    }
+}
+
 # ---------- [3/4] 安装 Claude Code (官方包) ----------
 Write-Host ""
 Write-Host "[3/4] 安装 Claude Code (官方包)..."
