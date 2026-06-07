@@ -10,6 +10,20 @@ Write-Host "  Claude Code 官方一键安装 (Windows)" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
+# ---------- [0/4] 解开 PowerShell 脚本运行限制 ----------
+# Windows 默认禁止运行 .ps1 脚本,而 npm / claude 在 Windows 上都是 .ps1,
+# 不处理会报"在此系统上禁止运行脚本"。下面做两件事:
+#   1) 本次进程临时放行(只影响当前窗口)
+#   2) 把当前用户的策略设为 RemoteSigned(微软推荐的安全标准,以后才能正常输 claude)
+try { Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force -ErrorAction Stop } catch {}
+$curPolicy = Get-ExecutionPolicy -Scope CurrentUser
+if ($curPolicy -eq 'Restricted' -or $curPolicy -eq 'AllSigned' -or $curPolicy -eq 'Undefined') {
+    try {
+        Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force -ErrorAction Stop
+        Write-Host "  [i] 已把脚本运行权限设为 RemoteSigned(安全标准),以后才能正常使用 claude" -ForegroundColor Yellow
+    } catch {}
+}
+
 # ---------- [1/4] 检测环境 + 外网连通性 ----------
 Write-Host "[1/4] 检测环境..."
 Write-Host "  系统: Windows  架构: $env:PROCESSOR_ARCHITECTURE"
@@ -58,7 +72,8 @@ if ($needNode) {
 # ---------- [3/4] 安装 Claude Code (官方包) ----------
 Write-Host ""
 Write-Host "[3/4] 安装 Claude Code (官方包)..."
-npm install -g @anthropic-ai/claude-code@latest $mirror
+# 用 npm.cmd 而非 npm,避免触发 npm.ps1 的脚本运行限制
+npm.cmd install -g @anthropic-ai/claude-code@latest $mirror
 
 # ---------- [4/4] 验证 ----------
 Write-Host ""
