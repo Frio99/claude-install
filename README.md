@@ -46,11 +46,13 @@ curl -fsSL https://raw.githubusercontent.com/Frio99/claude-install/main/uninstal
 irm https://raw.githubusercontent.com/Frio99/claude-install/main/uninstall.ps1 | iex
 ```
 
-卸载时会问你一句：
-- **直接回车** → 只删除 Claude Code 程序，保留你的配置和登录。
-- **输入 `y` 再回车** → 连配置和登录信息一起清空（**完全重置**，适合重新录教程 / 从头演示安装）。
+卸载分三档，按需选择（每一档都会单独问你）：
 
-> 卸载**不会**删除 Node.js、Git 等通用工具（别的程序可能在用）。
+1. **卸载 Claude Code 程序**（默认执行）。
+2. **删除配置 + 登录信息**：输入 `y` → 完全重置登录状态，适合重新录教程。
+3. **深度清理（连 Node.js / Git 一起卸载）**：输入 `yes` → 把通用工具也卸掉，回到「白板机器」，适合录教程从零演示完整安装。
+
+> ⚠️ 第 3 档会移除 Node.js / Git 这些通用工具，**其它依赖它们的程序会受影响**，所以必须完整输入 `yes` 才执行；不需要就直接回车跳过。
 
 ---
 
