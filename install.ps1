@@ -48,7 +48,7 @@ function Invoke-ClaudeInstall {
     Write-Host ""
     Write-Host "  正在检测网络连通性..."
     $netOk = $false
-    try { Invoke-WebRequest "https://claude.ai/" -UseBasicParsing -TimeoutSec 10 | Out-Null; $netOk = $true } catch {}
+    try { Invoke-WebRequest "https://claude.ai/install.ps1" -UseBasicParsing -TimeoutSec 10 | Out-Null; $netOk = $true } catch {}
     if ($netOk) {
         Write-Host "  [OK] 网络连通(能访问 Claude 服务器)" -ForegroundColor Green
     } else {
