@@ -50,18 +50,14 @@ function Invoke-ClaudeInstall {
     $netOk = $false
     try { Invoke-WebRequest "https://claude.ai/install.ps1" -UseBasicParsing -TimeoutSec 10 | Out-Null; $netOk = $true } catch {}
     if ($netOk) {
-        Write-Host "  [OK] 网络连通(能访问 Claude 服务器)" -ForegroundColor Green
+        Write-Host "  [OK] 网络连通(能访问 Claude 安装服务器)" -ForegroundColor Green
     } else {
-        Write-Host ""
-        Write-Host "  [X] 连不上 Claude 服务器(claude.ai)！无法继续安装。" -ForegroundColor Red
-        Write-Host "      请按下面做，然后【重新运行本命令】：" -ForegroundColor Red
-        Write-Host "        1) 开启你的网络代理 / 加速工具"
-        Write-Host "        2) 切换到「全局 / Global」模式"
-        Write-Host "           (只开规则 / PAC 模式往往不够，需要全局代理)"
-        return
+        Write-Host "  [!] 没探测到 Claude 安装服务器(可能没开网络代理，也可能是检测误判)。" -ForegroundColor Yellow
+        Write-Host "      · 若你确认网络代理已开 / 能访问 claude.ai -> 直接继续即可" -ForegroundColor Yellow
+        Write-Host "      · 否则请开启代理并切「全局 / Global」模式后再装" -ForegroundColor Yellow
     }
     Write-Host ""
-    Read-Host "  确认已关好杀毒软件和防火墙了吗？按回车继续(或关掉窗口退出)" | Out-Null
+    Read-Host "  确认已关好杀毒/防火墙、网络代理已就绪？按回车继续(或关掉窗口退出)" | Out-Null
     Write-Host ""
 
     # ---------- [1/4] 环境检测 ----------

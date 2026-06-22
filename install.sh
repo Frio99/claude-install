@@ -74,21 +74,15 @@ echo "  2. 临时关闭系统防火墙"
 echo ""
 echo "  正在检测网络连通性..."
 if curl -fsS --max-time 10 -o /dev/null https://claude.ai/install.sh 2>/dev/null; then
-    echo "  ✅ 网络连通（能访问 Claude 服务器）"
+    echo "  ✅ 网络连通（能访问 Claude 安装服务器）"
 else
-    echo ""
-    echo "  ❌ 连不上 Claude 服务器（claude.ai）！无法继续安装。"
-    echo "     Claude Code 必须能访问 claude.ai 才能安装和使用。"
-    echo ""
-    echo "     请按下面做，然后【重新运行本命令】："
-    echo "       1) 开启你的网络代理 / 加速工具"
-    echo "       2) 切换到「全局 / Global」模式"
-    echo "          （只开规则 / PAC 模式往往不够，需要全局代理）"
-    echo ""
-    exit 1
+    echo "  ⚠️  没探测到 Claude 安装服务器（可能没开网络代理，也可能是检测误判）。"
+    echo "     · 若你确认网络代理已开 / 能访问 claude.ai → 直接继续即可"
+    echo "     · 否则请开启代理并切「全局 / Global」模式后再装"
+    echo "       （只开规则 / PAC 模式往往不够，需要全局代理）"
 fi
 echo ""
-printf "  确认已关好杀毒软件和防火墙了吗？按回车继续，或 Ctrl+C 退出: "
+printf "  确认已关好杀毒/防火墙、网络代理已就绪？按回车继续，或 Ctrl+C 退出: "
 if [ -e /dev/tty ]; then read -r _ </dev/tty; fi
 echo ""
 
