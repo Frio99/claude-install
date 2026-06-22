@@ -6,7 +6,7 @@
 #   2. Python 3      —— 跑「上品 Skill」需要
 #   3. Git           —— 常用工具，部分功能需要
 # 检测先行 · 缺什么装什么 · 可重复运行（幂等）
-# 需要能科学上网（登录 claude.ai / 连 api.anthropic.com）
+# 需网络能访问 claude.ai / api.anthropic.com（中国大陆需配合网络代理工具并开全局）
 # 用法: curl -fsSL https://raw.githubusercontent.com/Frio99/claude-install/main/install.sh | bash
 # ============================================================
 # 不用 set -e：要在某步失败时走兜底，而不是整个脚本中断。
@@ -63,6 +63,34 @@ need_clt_then_exit() {
     echo ""
     exit 0
 }
+
+# ---------- 安装前：提醒关防护 + 检测网络连通性 ----------
+echo "────────────────────────────────────────────────────"
+echo "  ⚠️  安装前请先做两件事，否则极易被拦截、装不上："
+echo "────────────────────────────────────────────────────"
+echo "  1. 关闭杀毒 / 安全软件及其后台防护"
+echo "     （360 安全卫士 / 腾讯电脑管家 / 火绒 等，会拦脚本和装程序）"
+echo "  2. 临时关闭系统防火墙"
+echo ""
+echo "  正在检测网络连通性..."
+if curl -fsS --max-time 10 -o /dev/null https://claude.ai/ 2>/dev/null; then
+    echo "  ✅ 网络连通（能访问 Claude 服务器）"
+else
+    echo ""
+    echo "  ❌ 连不上 Claude 服务器（claude.ai）！无法继续安装。"
+    echo "     Claude Code 必须能访问 claude.ai 才能安装和使用。"
+    echo ""
+    echo "     请按下面做，然后【重新运行本命令】："
+    echo "       1) 开启你的网络代理 / 加速工具"
+    echo "       2) 切换到「全局 / Global」模式"
+    echo "          （只开规则 / PAC 模式往往不够，需要全局代理）"
+    echo ""
+    exit 1
+fi
+echo ""
+printf "  确认已关好杀毒软件和防火墙了吗？按回车继续，或 Ctrl+C 退出: "
+if [ -e /dev/tty ]; then read -r _ </dev/tty; fi
+echo ""
 
 # ---------- [1/4] 环境检测 ----------
 echo "[1/4] 检测环境..."
@@ -185,7 +213,7 @@ echo "  Git         : $(git --version 2>/dev/null || echo '未安装（可选）
 echo ""
 echo "  下一步："
 echo "  1. 关掉终端、重新打开（让命令生效）"
-echo "  2. 输入  claude  回车 → 浏览器登录你的官方订阅账号（需科学上网）"
+echo "  2. 输入  claude  回车 → 浏览器登录你的官方订阅账号（需网络可访问海外服务）"
 echo "  3. 按作者教程安装「上品 Skill」即可开始上品"
 echo ""
 echo "  （可选）想用国产 AI 省钱？可自行装 cc-switch 切换供应商："

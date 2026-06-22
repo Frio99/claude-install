@@ -5,7 +5,7 @@
 #   2. Python 3      —— 跑「上品 Skill」需要
 #   3. Git for Windows —— Claude Code 在 Windows 上要 bash
 # 检测先行 · 缺什么装什么 · 可重复运行（幂等）
-# 需要能科学上网（登录 claude.ai / 连 api.anthropic.com）
+# 需网络能访问 claude.ai / api.anthropic.com（中国大陆需配合网络代理工具并开全局）
 # 用法: irm https://raw.githubusercontent.com/Frio99/claude-install/main/install.ps1 | iex
 # ============================================================
 #
@@ -37,6 +37,32 @@ function Invoke-ClaudeInstall {
             Write-Host "  [i] 已把脚本运行权限设为 RemoteSigned(安全标准)，以后才能正常使用 claude" -ForegroundColor Yellow
         } catch {}
     }
+
+    # ---------- 安装前：提醒关防护 + 检测网络连通性 ----------
+    Write-Host "────────────────────────────────────────────────────" -ForegroundColor Yellow
+    Write-Host "  安装前请先做两件事，否则极易被拦截、装不上：" -ForegroundColor Yellow
+    Write-Host "────────────────────────────────────────────────────" -ForegroundColor Yellow
+    Write-Host "  1. 关闭杀毒 / 安全软件及其后台防护"
+    Write-Host "     (360 安全卫士 / 腾讯电脑管家 / 火绒 等，会拦脚本和装程序)"
+    Write-Host "  2. 临时关闭 Windows 防火墙 / Defender 实时保护"
+    Write-Host ""
+    Write-Host "  正在检测网络连通性..."
+    $netOk = $false
+    try { Invoke-WebRequest "https://claude.ai/" -UseBasicParsing -TimeoutSec 10 | Out-Null; $netOk = $true } catch {}
+    if ($netOk) {
+        Write-Host "  [OK] 网络连通(能访问 Claude 服务器)" -ForegroundColor Green
+    } else {
+        Write-Host ""
+        Write-Host "  [X] 连不上 Claude 服务器(claude.ai)！无法继续安装。" -ForegroundColor Red
+        Write-Host "      请按下面做，然后【重新运行本命令】：" -ForegroundColor Red
+        Write-Host "        1) 开启你的网络代理 / 加速工具"
+        Write-Host "        2) 切换到「全局 / Global」模式"
+        Write-Host "           (只开规则 / PAC 模式往往不够，需要全局代理)"
+        return
+    }
+    Write-Host ""
+    Read-Host "  确认已关好杀毒软件和防火墙了吗？按回车继续(或关掉窗口退出)" | Out-Null
+    Write-Host ""
 
     # ---------- [1/4] 环境检测 ----------
     Write-Host "[1/4] 检测环境..."
@@ -157,7 +183,7 @@ function Invoke-ClaudeInstall {
     Write-Host ""
     Write-Host "  下一步：" -ForegroundColor Cyan
     Write-Host "  1. 关掉 PowerShell、重新打开（让命令生效）"
-    Write-Host "  2. 输入  claude  回车 -> 浏览器登录你的官方订阅账号（需科学上网）"
+    Write-Host "  2. 输入  claude  回车 -> 浏览器登录你的官方订阅账号（需网络可访问海外服务）"
     Write-Host "  3. 按作者教程安装「上品 Skill」即可开始上品"
     Write-Host ""
     Write-Host "  （可选）想用国产 AI 省钱？可自行装 cc-switch:" -ForegroundColor DarkGray
