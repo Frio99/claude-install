@@ -4,7 +4,7 @@
 #   1. Claude Code   —— 主程序（官方原生安装器，无需 Node）
 #   2. Python 3      —— 跑「上品 Skill」需要
 #   3. Git for Windows —— Claude Code 在 Windows 上要 bash
-# 检测先行 · 缺什么装什么 · 可重复运行（幂等）
+# 检测先行 · 每个组件「装→复检→没成可重试」· 可重复运行（幂等）
 # 需网络能访问 claude.ai / api.anthropic.com（中国大陆需配合网络代理工具并开全局）
 # 用法: irm https://raw.githubusercontent.com/Frio99/claude-install/main/install.ps1 | iex
 # ============================================================
@@ -25,6 +25,25 @@ function Invoke-ClaudeInstall {
         $machine = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
         $user    = [System.Environment]::GetEnvironmentVariable("Path", "User")
         $env:Path = "$machine;$user"
+    }
+
+    # 通用：装 → 复检 → 没成就停下让用户解决后按回车重试（最多 $Max 次）
+    # 专门应对：弹窗点了「取消」、UAC 没点「是」、被杀毒拦了 等情况
+    function Install-WithRetry {
+        param([string]$Name, [scriptblock]$Check, [scriptblock]$Install, [int]$Max = 3)
+        for ($i = 1; $i -le $Max; $i++) {
+            if (& $Check) { return $true }
+            Write-Host "  正在安装 $Name (第 $i/$Max 次)..."
+            try { & $Install } catch { Write-Host "  安装过程报错：$($_.Exception.Message)" -ForegroundColor Yellow }
+            Update-PathFromRegistry
+            if (& $Check) { Write-Host "  [OK] $Name 安装成功" -ForegroundColor Green; return $true }
+            if ($i -lt $Max) {
+                Write-Host "  [!] $Name 还没装上。常见原因：弹窗点了「取消」/ UAC 没点「是」/ 被杀毒拦了。" -ForegroundColor Yellow
+                Read-Host "      解决后按回车重试(第 $($i+1) 次)，或关掉窗口退出" | Out-Null
+                Update-PathFromRegistry
+            }
+        }
+        return (& $Check)
     }
 
     # ---------- [0] 解开 PowerShell 脚本运行限制 ----------
@@ -72,84 +91,50 @@ function Invoke-ClaudeInstall {
     # ---------- [2/4] Python 3（上品 Skill 的运行时）----------
     Write-Host ""
     Write-Host "[2/4] 检测 Python 3 (运行上品 Skill 需要)..."
-    $pyOk = $false
-    $pyCmd = Get-Command python -ErrorAction SilentlyContinue
-    if ($pyCmd) {
+    $pyCheck = {
+        $c = Get-Command python -ErrorAction SilentlyContinue
+        if (-not $c) { return $false }
         try {
             $pv = (& python -c "import sys;print('%d.%d'%sys.version_info[:2])" 2>$null)
             $parts = $pv.Split('.')
-            if ([int]$parts[0] -ge 3 -and [int]$parts[1] -ge 8) {
-                Write-Host "  [OK] Python $pv 符合要求" -ForegroundColor Green
-                $pyOk = $true
-            } else {
-                Write-Host "  [!] Python $pv 偏旧 (建议 >= 3.8)" -ForegroundColor Yellow
-            }
-        } catch {}
-    } else {
-        Write-Host "  未检测到 Python 3"
+            return ([int]$parts[0] -ge 3 -and [int]$parts[1] -ge 8)
+        } catch { return $false }
     }
-    if (-not $pyOk) {
-        if ($hasWinget) {
-            Write-Host "  用 winget 安装 Python 3..."
-            winget install -e --id Python.Python.3.12 --accept-source-agreements --accept-package-agreements
-            Update-PathFromRegistry
-            if (Get-Command python -ErrorAction SilentlyContinue) {
-                Write-Host "  [OK] Python 安装完成: $(python --version)" -ForegroundColor Green
-            } else {
-                Write-Host "  [!] Python 已安装，但当前窗口暂时认不到。请关掉 PowerShell 重开，再跑一次本命令。" -ForegroundColor Yellow
-                return
-            }
-        } else {
-            Write-Host "  [X] 无 winget，请到 https://www.python.org/downloads/ 手动装 Python 3 后重试。" -ForegroundColor Red
-            return
-        }
+    if (& $pyCheck) {
+        Write-Host "  [OK] Python $(python --version) 符合要求" -ForegroundColor Green
+    } elseif ($hasWinget) {
+        Install-WithRetry "Python 3" $pyCheck { winget install -e --id Python.Python.3.12 --accept-source-agreements --accept-package-agreements } | Out-Null
+        if (-not (& $pyCheck)) { Write-Host "  [!] Python 仍未就绪，可关掉 PowerShell 重开再跑一次本命令。" -ForegroundColor Yellow }
+    } else {
+        Write-Host "  [X] 无 winget，请到 https://www.python.org/downloads/ 手动装 Python 3 后重试。" -ForegroundColor Red
     }
 
     # ---------- [2.5/4] Git for Windows（Claude Code 运行依赖 bash）----------
     Write-Host ""
     Write-Host "[2.5/4] 检测 Git for Windows (Claude Code 运行需要)..."
-    if (Get-Command git -ErrorAction SilentlyContinue) {
+    $gitCheck = { [bool](Get-Command git -ErrorAction SilentlyContinue) }
+    if (& $gitCheck) {
         Write-Host "  [OK] 已安装 Git ($(git --version))" -ForegroundColor Green
+    } elseif ($hasWinget) {
+        Install-WithRetry "Git for Windows" $gitCheck { winget install -e --id Git.Git --accept-source-agreements --accept-package-agreements } | Out-Null
+        if (-not (& $gitCheck)) { Write-Host "  [!] Git 仍未就绪，可关掉 PowerShell 重开再跑一次本命令。" -ForegroundColor Yellow }
     } else {
-        Write-Host "  未检测到 Git for Windows"
-        if ($hasWinget) {
-            Write-Host "  用 winget 安装 Git for Windows..."
-            winget install -e --id Git.Git --accept-source-agreements --accept-package-agreements
-            Update-PathFromRegistry
-            if (Get-Command git -ErrorAction SilentlyContinue) {
-                Write-Host "  [OK] Git 安装完成: $(git --version)" -ForegroundColor Green
-            } else {
-                Write-Host "  [!] Git 已安装，但当前窗口暂时认不到。请关掉 PowerShell 重开，再跑一次本命令。" -ForegroundColor Yellow
-                return
-            }
-        } else {
-            Write-Host "  [X] 无 winget，请到 https://git-scm.com/downloads/win 手动安装 Git for Windows。" -ForegroundColor Red
-            return
-        }
+        Write-Host "  [X] 无 winget，请到 https://git-scm.com/downloads/win 手动安装 Git for Windows。" -ForegroundColor Red
     }
 
-    # ---------- [3/4] Claude Code（官方原生安装器优先，npm 兜底）----------
+    # ---------- [3/4] Claude Code（官方原生安装器优先，npm 兜底，可重试）----------
     Write-Host ""
     Write-Host "[3/4] 安装 Claude Code..."
-    if (Get-Command claude -ErrorAction SilentlyContinue) {
-        Write-Host "  [OK] 已安装: $(claude --version)" -ForegroundColor Green
-    } else {
+    $claudeCheck = { [bool](Get-Command claude -ErrorAction SilentlyContinue) }
+    $claudeInstall = {
         Write-Host "  用官方原生安装器安装（自包含，无需 Node）..."
-        try { irm https://claude.ai/install.ps1 | iex } catch {
-            Write-Host "  原生安装器未成功：$($_.Exception.Message)" -ForegroundColor Yellow
-        }
+        try { irm https://claude.ai/install.ps1 | iex } catch { Write-Host "  原生安装器未成功：$($_.Exception.Message)" -ForegroundColor Yellow }
         Update-PathFromRegistry
-
         if (-not (Get-Command claude -ErrorAction SilentlyContinue)) {
             Write-Host "  改用备用方式（经 Node / npm）..." -ForegroundColor Yellow
-            if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-                if ($hasWinget) {
-                    Write-Host "  用 winget 安装 Node.js LTS..."
-                    winget install -e --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements
-                    Update-PathFromRegistry
-                } else {
-                    Write-Host "  [X] 无 winget 也无 Node，请到 https://nodejs.org 装 >=18 后重试。" -ForegroundColor Red
-                }
+            if (-not (Get-Command node -ErrorAction SilentlyContinue) -and $hasWinget) {
+                winget install -e --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements
+                Update-PathFromRegistry
             }
             if (Get-Command npm -ErrorAction SilentlyContinue) {
                 $mirror = ""
@@ -159,12 +144,13 @@ function Invoke-ClaudeInstall {
                 Update-PathFromRegistry
             }
         }
-
-        if (Get-Command claude -ErrorAction SilentlyContinue) {
-            Write-Host "  [OK] 安装成功: $(claude --version)" -ForegroundColor Green
-        } else {
-            Write-Host "  [!] 已尝试安装，但当前窗口找不到 claude -> 请关掉 PowerShell 重新打开。" -ForegroundColor Yellow
-        }
+    }
+    if (& $claudeCheck) {
+        Write-Host "  [OK] 已安装: $(claude --version)" -ForegroundColor Green
+    } else {
+        Install-WithRetry "Claude Code" $claudeCheck $claudeInstall | Out-Null
+        if (& $claudeCheck) { Write-Host "  [OK] 安装成功: $(claude --version)" -ForegroundColor Green }
+        else { Write-Host "  [!] 已尝试安装，但当前窗口找不到 claude -> 请关掉 PowerShell 重新打开再看。" -ForegroundColor Yellow }
     }
 
     # ---------- [4/4] 结果 ----------
@@ -172,10 +158,12 @@ function Invoke-ClaudeInstall {
     Write-Host "============================================" -ForegroundColor Cyan
     Write-Host "  安装结果" -ForegroundColor Cyan
     Write-Host "============================================" -ForegroundColor Cyan
-    if (Get-Command claude -ErrorAction SilentlyContinue) { Write-Host "  Claude Code : $(claude --version)" }
+    if (& $claudeCheck) { Write-Host "  Claude Code : $(claude --version)" }
     else { Write-Host "  Claude Code : 未就绪（重开 PowerShell 再看）" -ForegroundColor Yellow }
     if (Get-Command python -ErrorAction SilentlyContinue) { Write-Host "  Python 3    : $(python --version)" }
+    else { Write-Host "  Python 3    : 未就绪" -ForegroundColor Yellow }
     if (Get-Command git -ErrorAction SilentlyContinue) { Write-Host "  Git         : $(git --version)" }
+    else { Write-Host "  Git         : 未安装（可选）" -ForegroundColor Yellow }
     Write-Host ""
     Write-Host "  下一步：" -ForegroundColor Cyan
     Write-Host "  1. 关掉 PowerShell、重新打开（让命令生效）"
